@@ -34,11 +34,17 @@ withConfig('空配置得到全部默认值', () => {
   assert.equal(config.archiveOnBranchChange, true)
   assert.equal(config.maxConsecutiveFailures, 3)
   assert.equal(config.storyPerIteration, true)
+  assert.equal(config.bundleSkills, true)
 })
 
 withConfig('显式 null 能禁用工具与命令（不被默认值吞掉）', () => {
   assert.equal(Config({ toolName: null }).toolName, null)
   assert.equal(Config({ commandName: null }).commandName, null)
+})
+
+withConfig('bundleSkills 是布尔字段且可关闭', () => {
+  assert.equal(Config({}).bundleSkills, true)
+  assert.equal(Config({ bundleSkills: false }).bundleSkills, false)
 })
 
 withConfig('缺省时名称字段留空，交由 normalizeConfig 兜底', () => {

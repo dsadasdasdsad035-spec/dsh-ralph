@@ -18,6 +18,7 @@
 #   storyPerIteration      是否在每轮提示词中指定本轮故事（默认 true）
 #   toolName               注册的工具名（默认 ralph；设为 null 可禁用工具）
 #   commandName            注册的命令名（默认 ralph；设为 null 可禁用命令）
+#   bundleSkills           是否在安装时自动注册随包的 ralph / prd 技能（默认 true）
 #   timeoutMs              工具超时毫秒数（默认不设置 = 不受工具超时策略限制）
 
 - insert:

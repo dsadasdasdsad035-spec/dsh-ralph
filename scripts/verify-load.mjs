@@ -2,13 +2,15 @@
 /**
  * 端到端装载验证。
  *
- * 用**真实的** @deepseek-ai/cordis 装载本插件，确认三件事：
+ * 用**真实的** @deepseek-ai/cordis 装载本插件，确认四件事：
  *   1. 导出形态符合 Cordis 的函数式插件约定（name / inject / Config / apply）；
  *   2. `Config`（schemastery）能被 Cordis 的 resolveConfig 正确解析并补默认值；
- *   3. `apply()` 确实把工具与命令注册到了注入的服务上。
+ *   3. `apply()` 确实把工具与命令注册到了注入的服务上；
+ *   4. `apply()` 把随包的 ralph / prd 两个技能注册到了 `ctx.skills` 上
+ *      （DSH 不会自动加载插件包内的 skills/ 目录，必须插件自己注册）。
  *
- * 这里用假的 tools / subagents / commands 服务替代 Host 实现，因此不需要启动
- * DSH，也不会真的派生任何子 agent。用法：
+ * 这里用假的 tools / subagents / commands / skills 服务替代 Host 实现，因此
+ * 不需要启动 DSH，也不会真的派生任何子 agent。用法：
  *
  * ```bash
  * npm install          # 或把 node_modules/@deepseek-ai/{cordis,schemastery} 链接到 profile
@@ -25,6 +27,7 @@ import * as plugin from '../lib/index.js'
 /** 收集注册结果。 */
 const tools = []
 const commands = []
+const skills = []
 const logs = []
 
 /** 假的服务实现：只记录调用，不产生副作用。 */
@@ -45,6 +48,13 @@ const commandsService = {
   },
 }
 
+const skillsService = {
+  register(skill) {
+    skills.push(skill)
+    return () => {}
+  },
+}
+
 const subagentsService = {
   async start() {
     throw new Error('验证脚本不应真正启动子 agent')
@@ -53,10 +63,11 @@ const subagentsService = {
 
 const ctx = new Context()
 
-// 注入插件声明依赖的服务，以及可选的 commands 服务。
+// 注入插件声明依赖的服务，以及可选的 commands / skills 服务。
 ctx.provide('tools', toolsService)
 ctx.provide('subagents', subagentsService)
 ctx.provide('commands', commandsService)
+ctx.provide('skills', skillsService)
 
 // 用最小的 logger 实现覆盖日志输出，便于断言。
 ctx.provide('logger', Object.assign(
@@ -114,6 +125,18 @@ check('注册了一个名为 ralphx 的命令（config 生效）', () => {
   assert.equal(commands.length, 1)
   assert.equal(commands[0].name, 'ralphx')
   assert.equal(typeof commands[0].handler, 'function')
+})
+check('注册了随包的 ralph / prd 两个技能', () => {
+  assert.equal(skills.length, 2)
+  assert.deepEqual(skills.map((skill) => skill.name).sort(), ['prd', 'ralph'])
+  for (const skill of skills) {
+    assert.equal(typeof skill.description, 'string')
+    assert.ok(skill.description.length > 0, `${skill.name} 必须有 description`)
+    assert.ok(skill.content.length > 100, `${skill.name} 必须有正文`)
+    assert.deepEqual(skill.invocation, { modelInvocable: true, userInvocable: true })
+    // 正文里不应残留 frontmatter
+    assert.doesNotMatch(skill.content, /^---/)
+  }
 })
 check('日志中未出现加载错误', () => {
   assert.equal(logs.filter((line) => line.startsWith('error:')).length, 0)

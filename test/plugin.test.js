@@ -19,6 +19,7 @@ import { writePrd } from '../lib/prd.js'
 function makeCtx(options = {}) {
   const tools = []
   const commands = []
+  const skills = []
   const injected = []
   const logs = []
   const ctx = {
@@ -37,19 +38,30 @@ function makeCtx(options = {}) {
     subagents: options.subagents ?? { start: async () => ({}) },
     inject: (services, callback) => {
       injected.push(services)
-      callback({
-        commands: {
+      const scoped = {}
+      if (services.includes('commands')) {
+        scoped.commands = {
           register: (command) => {
             if (options.commandRegisterFails === true) throw new Error('命令已存在')
             commands.push(command)
             return () => {}
           },
-        },
-      })
+        }
+      }
+      if (services.includes('skills')) {
+        scoped.skills = {
+          register: (skill) => {
+            if (options.skillRegisterFails === true) throw new Error('技能已存在')
+            skills.push(skill)
+            return () => {}
+          },
+        }
+      }
+      callback(scoped)
       return () => {}
     },
   }
-  return { ctx, tools, commands, injected, logs }
+  return { ctx, tools, commands, skills, injected, logs }
 }
 
 /** 构造一个带工作目录的假 agent。 */
@@ -79,17 +91,44 @@ test('apply 注册工具与命令，并请求 commands 服务', () => {
   assert.deepEqual(tools[0].output.render({}, 'x'), [{ type: 'text', text: 'x' }])
   assert.equal(tools[0].isConcurrencySafe(), false)
 
-  assert.deepEqual(injected, [['commands']])
+  assert.deepEqual(injected, [['commands'], ['skills']])
   assert.equal(commands.length, 1)
   assert.equal(commands[0].name, 'ralph')
   assert.equal(typeof commands[0].handler, 'function')
 })
 
-test('配置可禁用工具与命令', () => {
-  const { ctx, tools, commands, injected } = makeCtx()
-  apply(ctx, { toolName: null, commandName: null })
+test('apply 把随包技能注册到 skills 服务', () => {
+  const { ctx, skills } = makeCtx()
+  apply(ctx, {})
+  assert.equal(skills.length, 2)
+  assert.deepEqual(skills.map((skill) => skill.name).sort(), ['prd', 'ralph'])
+  for (const skill of skills) {
+    assert.ok(skill.description.length > 0, `${skill.name} 应有 description`)
+    assert.ok(skill.content.length > 100, `${skill.name} 应有正文`)
+    assert.deepEqual(skill.invocation, { modelInvocable: true, userInvocable: true })
+  }
+})
+
+test('bundleSkills=false 时不注册技能', () => {
+  const { ctx, skills, injected } = makeCtx()
+  apply(ctx, { bundleSkills: false })
+  assert.equal(skills.length, 0)
+  assert.ok(!injected.some((services) => services.includes('skills')))
+})
+
+test('技能注册失败时插件仍能加载', () => {
+  const { ctx, tools, logs } = makeCtx({ skillRegisterFails: true })
+  apply(ctx, {})
+  assert.equal(tools.length, 1)
+  assert.ok(logs.some((line) => line.startsWith('warn:') && line.includes('注册技能')))
+})
+
+test('配置可禁用工具、命令与技能', () => {
+  const { ctx, tools, commands, skills, injected } = makeCtx()
+  apply(ctx, { toolName: null, commandName: null, bundleSkills: false })
   assert.equal(tools.length, 0)
   assert.equal(commands.length, 0)
+  assert.equal(skills.length, 0)
   assert.equal(injected.length, 0)
 })
 

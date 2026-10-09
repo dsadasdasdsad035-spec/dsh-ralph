@@ -79,6 +79,23 @@ pnpm install
 
 ---
 
+## 随包技能
+
+插件会**自己注册**两个技能到 `ctx.skills`，安装插件即生效，无需手工拷贝或额外配置：
+
+| 技能 | 作用 |
+|---|---|
+| `ralph` | 把已有 PRD 转成 `prd.json`（可逐条执行的用户故事列表） |
+| `prd` | 生成需求文档 `tasks/prd-<feature>.md` |
+
+为什么要插件自己注册：DSH **不会**自动加载插件包内的 `skills/` 目录。本地技能由 `dsh-skill-filesystem` 从项目/用户技能根目录发现，并且刻意不支持嵌套的 `**​/SKILL.md`；官方包 `dsh-agent-preset` 虽然带了 `skills/` 目录，其 `lib/index.js` 里也没有任何加载逻辑，那些文件永远不会生效。因此官方 `dsh-skill` 提供了两个入口由插件主动贡献：`ctx.skills.register()`（本插件采用）与 `ctx.skills.registerProvider()`。
+
+注册为 **runtime skill**，优先级是：**项目技能（`.dsh/skills`）> 插件技能 > 用户技能（`~/.dsh/skills`）**——项目内的同名技能可以覆盖它。
+
+不想要自带技能时，把 `bundleSkills` 设为 `false`。
+
+---
+
 ## 使用
 
 ### 1. 准备 PRD
@@ -166,6 +183,7 @@ pnpm install
 | `storyPerIteration` | `true` | 是否在提示词中指定本轮故事 |
 | `toolName` | `ralph` | 工具名；`null` 表示不注册工具 |
 | `commandName` | `ralph` | 命令名；`null` 表示不注册命令 |
+| `bundleSkills` | `true` | 是否把随包的 `ralph` / `prd` 技能注册到 `ctx.skills` |
 | `timeoutMs` | 不设置 | 工具超时；不设置表示不受工具超时策略约束 |
 
 ---
@@ -212,16 +230,17 @@ dsh-ralph/
 │   ├── prd.js                # prd.json 解析、统计、优先级挑选
 │   ├── progress.js           # progress.txt 维护与归档
 │   ├── prompt.js             # 提示词模板加载与渲染
+│   ├── skills.js             # 随包技能加载与 frontmatter 解析
 │   └── constants.js
 ├── prompts/
 │   └── ralph-iteration.md    # 迭代提示词（由原 prompt.md/CLAUDE.md 改造）
 ├── skills/
-│   ├── ralph/SKILL.md        # PRD → prd.json 转换器
-│   └── prd/SKILL.md          # 需求文档生成器
+│   ├── ralph/SKILL.md        # PRD → prd.json 转换器（插件启动时自动注册）
+│   └── prd/SKILL.md          # 需求文档生成器（插件启动时自动注册）
 ├── scripts/
 │   ├── install.mjs           # 安装到 profile
-│   └── verify-load.mjs       # 用真实 Cordis 验证装载
-├── test/                     # 62 项单元测试
+│   └── verify-load.mjs       # 用真实 Cordis 验证装载（含技能注册断言）
+├── test/                     # 74 项单元测试
 ├── flowchart/                # 原仓库的 React Flow 交互说明图（保留）
 └── prd.json.example
 ```
@@ -231,9 +250,9 @@ dsh-ralph/
 ## 开发
 
 ```bash
-npm install          # 只为测试安装 @deepseek-ai/schemastery
-npm test             # 62 项单元测试（node:test，无第三方测试框架）
-node scripts/verify-load.mjs   # 用真实 Cordis 装载插件
+npm install          # 只为测试安装 @deepseek-ai/{cordis,schemastery}
+npm test             # 74 项单元测试（node:test，无第三方测试框架）
+node scripts/verify-load.mjs   # 用真实 Cordis 装载插件（含技能注册断言）
 ```
 
 测试全部基于纯逻辑与假服务，不需要启动 DSH：
@@ -241,7 +260,8 @@ node scripts/verify-load.mjs   # 用真实 Cordis 装载插件
 - [`prd.test.js`](test/prd.test.js) —— PRD 解析、优先级挑选、配置归一化
 - [`progress.test.js`](test/progress.test.js) —— 归档、进度文件、模板渲染
 - [`loop.test.js`](test/loop.test.js) —— 完成检测、PRD 回读、失败重试、取消、资源释放
-- [`plugin.test.js`](test/plugin.test.js) —— 注册行为、冲突回退、并发保护、命令解析
+- [`plugin.test.js`](test/plugin.test.js) —— 注册行为（工具/命令/技能）、冲突回退、并发保护、命令解析
+- [`skills.test.js`](test/skills.test.js) —— frontmatter 解析、布尔语义、随包技能组装
 - [`config-schema.test.js`](test/config-schema.test.js) —— schemastery schema 与 `null` 语义回归
 
 ---

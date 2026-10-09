@@ -132,10 +132,12 @@ test('normalizeConfig 保留合法覆盖并拒绝非法类型', () => {
   assert.equal(config.archiveOnBranchChange, false)
   assert.equal(config.maxConsecutiveFailures, 5)
   assert.equal(config.toolName, null)
+  assert.equal(config.bundleSkills, true)
 
-  const bogus = normalizeConfig({ maxIterations: -1, provider: '', archiveOnBranchChange: 'yes', persona: 42 })
+  const bogus = normalizeConfig({ maxIterations: -1, provider: '', archiveOnBranchChange: 'yes', persona: 42, bundleSkills: 'yes' })
   assert.equal(bogus.maxIterations, DEFAULT_CONFIG.maxIterations)
   assert.equal(bogus.provider, 'spawn')
   assert.equal(bogus.archiveOnBranchChange, true)
   assert.equal(bogus.persona, null)
+  assert.equal(bogus.bundleSkills, true)
 })
