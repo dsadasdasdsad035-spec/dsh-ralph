@@ -1,0 +1,25 @@
+# dsh-ralph Bundle patch
+#
+# 把一个 Ralph 自主循环插件插入 DeepSeek Harness profile。
+#
+# 由 Host 在挂载本包时自动应用（package.json 的 dsh.bundle.patch 指向本文件）。
+# 如果只想单独调整配置，请在 profile 自己的 cordis.patch.yml 里用同样的 id
+# 覆盖 config，而不要修改本文件。
+#
+# 可选配置项（全部有默认值，通常不需要写）：
+#   maxIterations          最大迭代轮数（默认 10，与原版 ralph.sh 一致）
+#   provider               子 agent 提供方（默认 spawn，即进程内一次性子 agent）
+#   prdPath                PRD 文件（默认 prd.json，相对会话工作目录）
+#   progressPath           进度日志（默认 progress.txt）
+#   archiveDir             归档目录（默认 archive）
+#   archiveOnBranchChange  分支切换时归档上一轮（默认 true）
+#   promptFile             自定义迭代提示词模板（默认使用包内置模板）
+#   agentOptions           子 agent 的模型路由覆盖，例如 { provider, model, reasoningEffort }
+#   storyPerIteration      是否在每轮提示词中指定本轮故事（默认 true）
+#   toolName               注册的工具名（默认 ralph；设为 null 可禁用工具）
+#   commandName            注册的命令名（默认 ralph；设为 null 可禁用命令）
+#   timeoutMs              工具超时毫秒数（默认不设置 = 不受工具超时策略限制）
+
+- insert:
+    - id: ralph
+      name: dsh-ralph

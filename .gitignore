@@ -1,0 +1,12 @@
+# 依赖
+node_modules/
+
+# Ralph 运行时产物（属于被 Ralph 操作的项目，不属于本插件仓库）
+prd.json
+progress.txt
+archive/
+.last-branch
+
+# 编辑器与系统
+.DS_Store
+*.log
