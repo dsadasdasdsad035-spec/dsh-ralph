@@ -50,9 +50,34 @@ const commandsService = {
 
 const skillsService = {
   register(skill) {
-    skills.push(skill)
+    // 模拟 ctx.skills.register 的默认值补全：官方会补 invocation 与 provider。
+    skills.push({
+      ...skill,
+      invocation: skill.invocation ?? { modelInvocable: true, userInvocable: true },
+      provider: skill.provider ?? 'runtime',
+    })
     return () => {}
   },
+}
+
+/**
+ * 照抄官方 `dsh-skill` 加载路径的 `validateDefinition` 字段校验。
+ *
+ * `ctx.skills.register()` 只校验 name / description / invocation，而**加载**
+ * 走的是更严格的一套。只验注册侧会漏掉 `source` 这类必填字段——那正是
+ * v1.1.0 的 bug：技能能列出来，一加载就报 `source must be a string`。
+ */
+const SKILL_NAME_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+function validateLoadedSkill(skill) {
+  if (typeof skill.name !== 'string') throw new TypeError('loaded skill name must be a string')
+  if (!SKILL_NAME_PATTERN.test(skill.name)) throw new Error(`loaded skill has invalid name "${skill.name}"`)
+  if (typeof skill.description !== 'string') throw new TypeError(`loaded skill "${skill.name}" description must be a string`)
+  if (skill.description.length === 0) throw new Error(`loaded skill "${skill.name}" requires a description`)
+  if (skill.whenToUse !== undefined && typeof skill.whenToUse !== 'string') throw new TypeError(`loaded skill "${skill.name}" whenToUse must be a string`)
+  if (typeof skill.source !== 'string') throw new TypeError(`loaded skill "${skill.name}" source must be a string`)
+  if (typeof skill.provider !== 'string') throw new TypeError(`loaded skill "${skill.name}" provider must be a string`)
+  if (typeof skill.content !== 'string') throw new TypeError(`loaded skill "${skill.name}" content must be a string`)
+  if (skill.path !== undefined && typeof skill.path !== 'string') throw new TypeError(`loaded skill "${skill.name}" path must be a string`)
 }
 
 const subagentsService = {
@@ -130,6 +155,10 @@ check('注册了随包的 ralph / prd 两个技能', () => {
   assert.equal(skills.length, 2)
   assert.deepEqual(skills.map((skill) => skill.name).sort(), ['prd', 'ralph'])
   for (const skill of skills) {
+    // 关键：用加载路径的严格校验器验证，而不只是看注册收到了什么
+    validateLoadedSkill(skill)
+    assert.equal(skill.source, 'bundled')
+    assert.equal(skill.provider, 'runtime')
     assert.equal(typeof skill.description, 'string')
     assert.ok(skill.description.length > 0, `${skill.name} 必须有 description`)
     assert.ok(skill.content.length > 100, `${skill.name} 必须有正文`)

@@ -94,3 +94,15 @@ test('loadBundledSkills 的 description 含中文触发词（供模型路由）'
   const ralph = skills.find((skill) => skill.name === 'ralph')
   assert.match(ralph.description, /中文触发/)
 })
+
+test('每个技能都带 source（回归 v1.1.0 的加载失败）', () => {
+  // v1.1.0 漏了 source：`ctx.skills.register()` 不校验它，所以注册成功、技能
+  // 也能列进目录，但一旦加载正文，官方 validateDefinition 就会抛
+  // `loaded skill "x" source must be a string`。
+  for (const skill of loadBundledSkills()) {
+    assert.equal(typeof skill.source, 'string', `${skill.name}.source 必须是字符串`)
+    assert.equal(skill.source, 'bundled')
+    assert.equal(typeof skill.content, 'string')
+    assert.ok(skill.content.length > 100)
+  }
+})

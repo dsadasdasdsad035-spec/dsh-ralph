@@ -1,6 +1,6 @@
 {
   "name": "dsh-ralph",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Ralph 自主 AI 循环的 DeepSeek Harness 插件：反复启动全新子 agent，逐个实现 prd.json 中的用户故事，直到全部完成",
   "keywords": [
     "dsh",
