@@ -8,8 +8,20 @@
     "cordis-plugin",
     "ralph",
     "agent-loop",
-    "autonomous"
+    "autonomous",
+    "prd",
+    "ai-agent"
   ],
+  "author": "aaxiaomi <296629801@qq.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dsadasdasdsad035-spec/dsh-ralph.git"
+  },
+  "bugs": {
+    "url": "https://github.com/dsadasdasdsad035-spec/dsh-ralph/issues"
+  },
+  "homepage": "https://github.com/dsadasdasdsad035-spec/dsh-ralph#readme",
   "type": "module",
   "main": "./lib/index.js",
   "exports": {
@@ -36,7 +48,13 @@
     "node": ">=20"
   },
   "scripts": {
-    "test": "node --test test/"
+    "test": "node --test test/",
+    "verify": "node scripts/verify-load.mjs",
+    "prepublishOnly": "npm test && npm run verify"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "~4.0.4",
@@ -51,7 +69,7 @@
     }
   },
   "devDependencies": {
+    "@deepseek-ai/cordis": "^4.0.4",
     "@deepseek-ai/schemastery": "^3.18.4"
-  },
-  "license": "MIT"
+  }
 }
